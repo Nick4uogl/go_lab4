@@ -1,242 +1,104 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"html/template"
+	"log"
 	"math"
-	"os"
+	"net/http"
 	"strconv"
 )
 
-func main() {
-	scanner := bufio.NewScanner(os.Stdin)
-	
-	for {
-		fmt.Println("\nPower System Calculator")
-		fmt.Println("1. Cable Calculator")
-		fmt.Println("2. Short Circuit Calculator")
-		fmt.Println("3. Network Calculator")
-		fmt.Println("4. Exit")
-		fmt.Print("Select an option (1-4): ")
-		
-		scanner.Scan()
-		option := scanner.Text()
-		
-		switch option {
-		case "1":
-			runCableCalculator(scanner)
-		case "2":
-			runShortCircuitCalculator(scanner)
-		case "3":
-			runNetworkCalculator(scanner)
-		case "4":
-			fmt.Println("Exiting program.")
-			return
-		default:
-			fmt.Println("Invalid option. Please try again.")
-		}
-	}
-}
-
-// Cable Calculator implementation
-func runCableCalculator(scanner *bufio.Scanner) {
-	fmt.Println("\n=== Cable Calculator ===")
-	
-	// Default values
-	smDefault := "1300"
-	ikDefault := "2500"
-	tfDefault := "2.5"
-	
-	// Get input values
-	sm := getInput(scanner, fmt.Sprintf("Enter Sm (MVA) [default: %s]: ", smDefault), smDefault)
-	ik := getInput(scanner, fmt.Sprintf("Enter Ik (A) [default: %s]: ", ikDefault), ikDefault)
-	tf := getInput(scanner, fmt.Sprintf("Enter tf (s) [default: %s]: ", tfDefault), tfDefault)
-	
-	// Parse input values
-	smVal, _ := strconv.ParseFloat(sm, 64)
-	ikVal, _ := strconv.ParseFloat(ik, 64)
-	tfVal, _ := strconv.ParseFloat(tf, 64)
-	
-	// Calculate results
-	results := calculateCableParameters(smVal, ikVal, tfVal)
-	
-	// Display results
-	fmt.Println("\nResults:")
-	fmt.Printf("Normal mode current: %s A\n", results.normalCurrent)
-	fmt.Printf("Post-emergency current: %s A\n", results.postEmergencyCurrent)
-	fmt.Printf("Economic cross-section: %s mm²\n", results.economicCrossSection)
-	fmt.Printf("Minimum cross-section: %s mm²\n", results.minimumCrossSection)
-}
-
-// Short Circuit Calculator implementation
-func runShortCircuitCalculator(scanner *bufio.Scanner) {
-	fmt.Println("\n=== Short Circuit Calculator ===")
-	
-	// Default value
-	skDefault := "200"
-	
-	// Get input value
-	sk := getInput(scanner, fmt.Sprintf("Enter Short-Circuit Power (Sk) [MVA] [default: %s]: ", skDefault), skDefault)
-	
-	// Parse input value
-	skVal, _ := strconv.ParseFloat(sk, 64)
-	
-	// Calculate results
-	results := calculateShortCircuitParameters(skVal)
-	
-	// Display results
-	fmt.Println("\nResults:")
-	fmt.Printf("Xc: %s\n", results.reactorImpedance)
-	fmt.Printf("Xt: %s\n", results.transformerImpedance)
-	fmt.Printf("Total Resistance: %s\n", results.totalImpedance)
-	fmt.Printf("Initial Three-Phase SC Current: %s\n", results.initialShortCircuitCurrent)
-}
-
-// Network Calculator implementation
-func runNetworkCalculator(scanner *bufio.Scanner) {
-	fmt.Println("\n=== Power Network Calculator ===")
-	
-	// Default values
-	rsnDefault := "10.65"
-	xsnDefault := "24.02"
-	rsnMinDefault := "34.88"
-	xsnMinDefault := "65.68"
-	
-	// Get input values
-	rsn := getInput(scanner, fmt.Sprintf("Enter Rsn (Ω) [default: %s]: ", rsnDefault), rsnDefault)
-	xsn := getInput(scanner, fmt.Sprintf("Enter Xsn (Ω) [default: %s]: ", xsnDefault), xsnDefault)
-	rsnMin := getInput(scanner, fmt.Sprintf("Enter Rsn min (Ω) [default: %s]: ", rsnMinDefault), rsnMinDefault)
-	xsnMin := getInput(scanner, fmt.Sprintf("Enter Xsn min (Ω) [default: %s]: ", xsnMinDefault), xsnMinDefault)
-	
-	// Parse input values
-	rsnVal, _ := strconv.ParseFloat(rsn, 64)
-	xsnVal, _ := strconv.ParseFloat(xsn, 64)
-	rsnMinVal, _ := strconv.ParseFloat(rsnMin, 64)
-	xsnMinVal, _ := strconv.ParseFloat(xsnMin, 64)
-	
-	// Calculate results
-	results := calculateNetwork(rsnVal, xsnVal, rsnMinVal, xsnMinVal)
-	
-	// Display results
-	fmt.Println("\n110kV bus SC currents (normal/minimum):")
-	fmt.Printf("Three-phase: %s/%s A\n", results.iSh3, results.iSh3Min)
-	fmt.Printf("Two-phase: %s/%s A\n", results.iSh2, results.iSh2Min)
-	
-	fmt.Println("\n10kV bus SC currents (normal/minimum):")
-	fmt.Printf("Three-phase: %s/%s A\n", results.iShN3, results.iShN3Min)
-	fmt.Printf("Two-phase: %s/%s A\n", results.iShN2, results.iShN2Min)
-	
-	fmt.Println("\nPoint 10 SC currents (normal/minimum):")
-	fmt.Printf("Three-phase: %s/%s A\n", results.iLN3, results.iLN3Min)
-	fmt.Printf("Two-phase: %s/%s A\n", results.iLN2, results.iLN2Min)
-}
-
-// Helper function to get user input with default value
-func getInput(scanner *bufio.Scanner, prompt string, defaultValue string) string {
-	fmt.Print(prompt)
-	scanner.Scan()
-	value := scanner.Text()
-	if value == "" {
-		return defaultValue
-	}
-	return value
-}
-
-// Cable Calculator structures and functions
+// Структури та типи даних
 type CableResults struct {
-	normalCurrent       string
-	postEmergencyCurrent string
-	economicCrossSection string
-	minimumCrossSection  string
+	NormalCurrent        string
+	PostEmergencyCurrent string
+	EconomicCrossSection string
+	MinimumCrossSection  string
 }
 
-func calculateCableParameters(sm float64, ik float64, tf float64) CableResults {
-	im := (sm / 2) / (math.Sqrt(3.0) * 10)
-	imPa := 2 * im
-	sEk := im / 1.4
-	sVsS := (ik * math.Sqrt(tf)) / 92
-	
-	return CableResults{
-		normalCurrent:       fmt.Sprintf("%.1f", im),
-		postEmergencyCurrent: fmt.Sprintf("%.0f", imPa),
-		economicCrossSection: fmt.Sprintf("%.1f", sEk),
-		minimumCrossSection:  fmt.Sprintf("%.0f", sVsS),
-	}
-}
-
-// Short Circuit Calculator structures and functions
 type ShortCircuitResults struct {
-	reactorImpedance          string
-	transformerImpedance      string
-	totalImpedance            string
-	initialShortCircuitCurrent string
+	ReactorImpedance           string
+	TransformerImpedance       string
+	TotalImpedance             string
+	InitialShortCircuitCurrent string
 }
 
-func calculateShortCircuitParameters(sk float64) ShortCircuitResults {
-	// Reactor impedance calculation
-	xc := math.Pow(10.5, 2) / sk
-	// Transformer impedance calculation
-	xt := (10.5 / 100) * (math.Pow(10.5, 2) / 6.3)
-	// Total impedance
-	totalImpedance := xc + xt
-	// Initial three-phase short-circuit current
-	initialSCCurrent := 10.5 / (math.Sqrt(3.0) * totalImpedance)
-	
-	return ShortCircuitResults{
-		reactorImpedance:          fmt.Sprintf("%.2f", xc),
-		transformerImpedance:      fmt.Sprintf("%.2f", xt),
-		totalImpedance:            fmt.Sprintf("%.2f", totalImpedance),
-		initialShortCircuitCurrent: fmt.Sprintf("%.1f", initialSCCurrent),
-	}
+type NetworkResults struct {
+	ISh3     string
+	ISh2     string
+	ISh3Min  string
+	ISh2Min  string
+	IShN3    string
+	IShN2    string
+	IShN3Min string
+	IShN2Min string
+	ILN3     string
+	ILN2     string
+	ILN3Min  string
+	ILN2Min  string
 }
 
-// Network Calculator structures and functions
 type Impedance struct {
-	resistance float64
-	reactance  float64
-	impedance  float64
+	Resistance float64
+	Reactance  float64
+	Impedance  float64
 }
 
-func NewImpedance(resistance float64, reactance float64) Impedance {
+// Функції для Impedance
+func NewImpedance(resistance, reactance float64) Impedance {
 	return Impedance{
-		resistance: resistance,
-		reactance:  reactance,
-		impedance:  math.Sqrt(math.Pow(resistance, 2) + math.Pow(reactance, 2)),
+		Resistance: resistance,
+		Reactance:  reactance,
+		Impedance:  math.Sqrt(math.Pow(resistance, 2) + math.Pow(reactance, 2)),
 	}
 }
 
 func (imp Impedance) Transformed() Impedance {
 	kpr := math.Pow(11.0, 2) / math.Pow(115.0, 2)
-	return NewImpedance(imp.resistance*kpr, imp.reactance*kpr)
+	return NewImpedance(imp.Resistance*kpr, imp.Reactance*kpr)
 }
 
-type Currents struct {
-	threePhaseNormal string
-	twoPhaseNormal   string
-	threePhaseMin    string
-	twoPhaseMin      string
+// Функція розрахунку параметрів кабелю
+func calculateCableParameters(sm, ik, tf float64) CableResults {
+	im := (sm / 2) / (math.Sqrt(3.0) * 10)
+	imPa := 2 * im
+	sEk := im / 1.4
+	sVsS := (ik * math.Sqrt(tf)) / 92
+
+	return CableResults{
+		NormalCurrent:        fmt.Sprintf("%.1f", im),
+		PostEmergencyCurrent: fmt.Sprintf("%.0f", imPa),
+		EconomicCrossSection: fmt.Sprintf("%.1f", sEk),
+		MinimumCrossSection:  fmt.Sprintf("%.0f", sVsS),
+	}
 }
 
-type NetworkResults struct {
-	iSh3    string
-	iSh2    string
-	iSh3Min string
-	iSh2Min string
-	iShN3   string
-	iShN2   string
-	iShN3Min string
-	iShN2Min string
-	iLN3    string
-	iLN2    string
-	iLN3Min string
-	iLN2Min string
+// Функція розрахунку параметрів короткого замикання
+func calculateShortCircuitParameters(sk float64) ShortCircuitResults {
+	// Розрахунок імпедансу реактора
+	xc := math.Pow(10.5, 2) / sk
+	// Розрахунок імпедансу трансформатора
+	xt := (10.5 / 100) * (math.Pow(10.5, 2) / 6.3)
+	// Загальний імпеданс
+	totalImpedance := xc + xt
+	// Початковий струм трифазного короткого замикання
+	initialSCCurrent := 10.5 / (math.Sqrt(3.0) * totalImpedance)
+
+	return ShortCircuitResults{
+		ReactorImpedance:           fmt.Sprintf("%.2f", xc),
+		TransformerImpedance:       fmt.Sprintf("%.2f", xt),
+		TotalImpedance:             fmt.Sprintf("%.2f", totalImpedance),
+		InitialShortCircuitCurrent: fmt.Sprintf("%.1f", initialSCCurrent),
+	}
 }
 
+// Допоміжні функції для розрахунку мережі
 func calculateTransformerReactance() float64 {
 	return (11.1 * math.Pow(115.0, 2)) / (100 * 6.3)
 }
 
-func calculateImpedances(resistance float64, reactance float64, transformerReactance float64) Impedance {
+func calculateImpedances(resistance, reactance, transformerReactance float64) Impedance {
 	return NewImpedance(resistance, reactance+transformerReactance)
 }
 
@@ -244,54 +106,147 @@ func formatCurrent(current float64) string {
 	return fmt.Sprintf("%.1f", current)
 }
 
-func calculateCurrents(voltage float64, normal Impedance, minimum Impedance) Currents {
-	threePhaseNormal := formatCurrent(voltage / (math.Sqrt(3.0) * normal.impedance))
+func calculateCurrents(voltage float64, normal, minimum Impedance) (string, string, string, string) {
+	threePhaseNormal := formatCurrent(voltage / (math.Sqrt(3.0) * normal.Impedance))
 	threePhaseNormalVal, _ := strconv.ParseFloat(threePhaseNormal, 64)
 	twoPhaseNormal := formatCurrent(threePhaseNormalVal * (math.Sqrt(3.0) / 2))
-	
-	threePhaseMin := formatCurrent(voltage / (math.Sqrt(3.0) * minimum.impedance))
+
+	threePhaseMin := formatCurrent(voltage / (math.Sqrt(3.0) * minimum.Impedance))
 	threePhaseMinVal, _ := strconv.ParseFloat(threePhaseMin, 64)
 	twoPhaseMin := formatCurrent(threePhaseMinVal * (math.Sqrt(3.0) / 2))
-	
-	return Currents{
-		threePhaseNormal: threePhaseNormal,
-		twoPhaseNormal:   twoPhaseNormal,
-		threePhaseMin:    threePhaseMin,
-		twoPhaseMin:      twoPhaseMin,
-	}
+
+	return threePhaseNormal, twoPhaseNormal, threePhaseMin, twoPhaseMin
 }
 
-func calculatePoint10Currents(normal Impedance, minimum Impedance) Currents {
-	const lineResistance = 12.52 // Total resistance of the line
-	const lineReactance = 6.88   // Total reactance of the line
+func calculatePoint10Currents(normal, minimum Impedance) (string, string, string, string) {
+	const lineResistance = 12.52 // Загальний опір лінії
+	const lineReactance = 6.88   // Загальна реактивність лінії
 
-	normalTotal := NewImpedance(normal.resistance+lineResistance, normal.reactance+lineReactance)
-	minimumTotal := NewImpedance(minimum.resistance+lineResistance, minimum.reactance+lineReactance)
+	normalTotal := NewImpedance(normal.Resistance+lineResistance, normal.Reactance+lineReactance)
+	minimumTotal := NewImpedance(minimum.Resistance+lineResistance, minimum.Reactance+lineReactance)
 
 	return calculateCurrents(11.0, normalTotal, minimumTotal)
 }
 
-func calculateNetwork(rsn float64, xsn float64, rsnMin float64, xsnMin float64) NetworkResults {
+// Функція розрахунку мережі
+func calculateNetwork(rsn, xsn, rsnMin, xsnMin float64) NetworkResults {
 	xt := calculateTransformerReactance()
 	normal := calculateImpedances(rsn, xsn, xt)
 	minimum := calculateImpedances(rsnMin, xsnMin, xt)
 
-	currents110kV := calculateCurrents(115.0, normal, minimum)
-	currents10kV := calculateCurrents(11.0, normal.Transformed(), minimum.Transformed())
-	currentsPoint10 := calculatePoint10Currents(normal, minimum)
+	iSh3, iSh2, iSh3Min, iSh2Min := calculateCurrents(115.0, normal, minimum)
+	iShN3, iShN2, iShN3Min, iShN2Min := calculateCurrents(11.0, normal.Transformed(), minimum.Transformed())
+	iLN3, iLN2, iLN3Min, iLN2Min := calculatePoint10Currents(normal, minimum)
 
 	return NetworkResults{
-		iSh3:    currents110kV.threePhaseNormal,
-		iSh2:    currents110kV.twoPhaseNormal,
-		iSh3Min: currents110kV.threePhaseMin,
-		iSh2Min: currents110kV.twoPhaseMin,
-		iShN3:   currents10kV.threePhaseNormal,
-		iShN2:   currents10kV.twoPhaseNormal,
-		iShN3Min: currents10kV.threePhaseMin,
-		iShN2Min: currents10kV.twoPhaseMin,
-		iLN3:    currentsPoint10.threePhaseNormal,
-		iLN2:    currentsPoint10.twoPhaseNormal,
-		iLN3Min: currentsPoint10.threePhaseMin,
-		iLN2Min: currentsPoint10.twoPhaseMin,
+		ISh3:     iSh3,
+		ISh2:     iSh2,
+		ISh3Min:  iSh3Min,
+		ISh2Min:  iSh2Min,
+		IShN3:    iShN3,
+		IShN2:    iShN2,
+		IShN3Min: iShN3Min,
+		IShN2Min: iShN2Min,
+		ILN3:     iLN3,
+		ILN2:     iLN2,
+		ILN3Min:  iLN3Min,
+		ILN2Min:  iLN2Min,
 	}
+}
+
+// Обробники HTTP запитів
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/index.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, nil)
+}
+
+func cableCalculatorHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	sm, _ := strconv.ParseFloat(r.FormValue("sm"), 64)
+	ik, _ := strconv.ParseFloat(r.FormValue("ik"), 64)
+	tf, _ := strconv.ParseFloat(r.FormValue("tf"), 64)
+
+	results := calculateCableParameters(sm, ik, tf)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{
+		"normalCurrent": "%s",
+		"postEmergencyCurrent": "%s",
+		"economicCrossSection": "%s",
+		"minimumCrossSection": "%s"
+	}`, results.NormalCurrent, results.PostEmergencyCurrent,
+		results.EconomicCrossSection, results.MinimumCrossSection)
+}
+
+func shortCircuitCalculatorHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	sk, _ := strconv.ParseFloat(r.FormValue("sk"), 64)
+
+	results := calculateShortCircuitParameters(sk)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{
+		"reactorImpedance": "%s",
+		"transformerImpedance": "%s",
+		"totalImpedance": "%s",
+		"initialShortCircuitCurrent": "%s"
+	}`, results.ReactorImpedance, results.TransformerImpedance,
+		results.TotalImpedance, results.InitialShortCircuitCurrent)
+}
+
+func networkCalculatorHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	rsn, _ := strconv.ParseFloat(r.FormValue("rsn"), 64)
+	xsn, _ := strconv.ParseFloat(r.FormValue("xsn"), 64)
+	rsnMin, _ := strconv.ParseFloat(r.FormValue("rsnMin"), 64)
+	xsnMin, _ := strconv.ParseFloat(r.FormValue("xsnMin"), 64)
+
+	results := calculateNetwork(rsn, xsn, rsnMin, xsnMin)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{
+		"iSh3": "%s",
+		"iSh2": "%s",
+		"iSh3Min": "%s",
+		"iSh2Min": "%s",
+		"iShN3": "%s",
+		"iShN2": "%s",
+		"iShN3Min": "%s",
+		"iShN2Min": "%s",
+		"iLN3": "%s",
+		"iLN2": "%s",
+		"iLN3Min": "%s",
+		"iLN2Min": "%s"
+	}`, results.ISh3, results.ISh2, results.ISh3Min, results.ISh2Min,
+		results.IShN3, results.IShN2, results.IShN3Min, results.IShN2Min,
+		results.ILN3, results.ILN2, results.ILN3Min, results.ILN2Min)
+}
+
+func main() {
+	// Статичні файли
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	// Маршрутизація
+	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/calculate/cable", cableCalculatorHandler)
+	http.HandleFunc("/calculate/shortcircuit", shortCircuitCalculatorHandler)
+	http.HandleFunc("/calculate/network", networkCalculatorHandler)
+
+	// Запуск сервера
+	fmt.Println("Server is running on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

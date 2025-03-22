@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Power System Calculator</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Power System Calculator</h1>
+
+      <div class="tabs">
+        <div class="tab active" data-tab="cable">Калькулятор кабелів</div>
+        <div class="tab" data-tab="shortcircuit">Калькулятор КЗ</div>
+        <div class="tab" data-tab="network">Калькулятор мереж</div>
+      </div>
+
+      <!-- Cable Calculator -->
+      <div id="cable" class="calculator active">
+        <h2>Калькулятор кабелів</h2>
+        <form id="cable-form">
+          <div class="form-group">
+            <label for="cable-sm">Sm (MBA):</label>
+            <input
+              type="number"
+              id="cable-sm"
+              name="sm"
+              value="1300"
+              placeholder="Введіть Sm"
+            />
+          </div>
+          <div class="form-group">
+            <label for="cable-ik">Ik (A):</label>
+            <input
+              type="number"
+              id="cable-ik"
+              name="ik"
+              value="2500"
+              placeholder="Введіть Ik"
+            />
+          </div>
+          <div class="form-group">
+            <label for="cable-tf">tf (s):</label>
+            <input
+              type="number"
+              id="cable-tf"
+              name="tf"
+              value="2.5"
+              step="0.1"
+              placeholder="Введіть tf"
+            />
+          </div>
+          <button type="submit">Розрахувати</button>
+        </form>
+
+        <div id="cable-results" class="results" style="display: none">
+          <h3>Результати:</h3>
+          <div class="result-item">
+            <span class="result-label">Струм нормального режиму:</span>
+            <span id="normal-current" class="result-value"></span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Струм післяаварійного режиму:</span>
+            <span id="post-emergency-current" class="result-value"></span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Економічний переріз:</span>
+            <span id="economic-cross-section" class="result-value"></span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Мінімальний переріз:</span>
+            <span id="minimum-cross-section" class="result-value"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Short Circuit Calculator -->
+      <div id="shortcircuit" class="calculator">
+        <h2>Калькулятор короткого замикання</h2>
+        <form id="sc-form">
+          <div class="form-group">
+            <label for="sc-sk">Потужність КЗ (Sk) [MBA]:</label>
+            <input
+              type="number"
+              id="sc-sk"
+              name="sk"
+              value="200"
+              placeholder="Введіть Sk"
+            />
+          </div>
+          <button type="submit">Розрахувати</button>
+        </form>
+
+        <div id="sc-results" class="results" style="display: none">
+          <h3>Результати:</h3>
+          <div class="result-item">
+            <span class="result-label">Xc:</span>
+            <span id="reactor-impedance" class="result-value"></span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Xt:</span>
+            <span id="transformer-impedance" class="result-value"></span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Загальний опір:</span>
+            <span id="total-impedance" class="result-value"></span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Початковий струм трифазного КЗ:</span>
+            <span id="initial-sc-current" class="result-value"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network Calculator -->
+      <div id="network" class="calculator">
+        <h2>Калькулятор електричної мережі</h2>
+        <form id="network-form">
+          <div class="form-group">
+            <label for="net-rsn">Rsn (Ω):</label>
+            <input
+              type="number"
+              id="net-rsn"
+              name="rsn"
+              value="10.65"
+              step="0.01"
+              placeholder="Введіть Rsn"
+            />
+          </div>
+          <div class="form-group">
+            <label for="net-xsn">Xsn (Ω):</label>
+            <input
+              type="number"
+              id="net-xsn"
+              name="xsn"
+              value="24.02"
+              step="0.01"
+              placeholder="Введіть Xsn"
+            />
+          </div>
+          <div class="form-group">
+            <label for="net-rsn-min">Rsn min (Ω):</label>
+            <input
+              type="number"
+              id="net-rsn-min"
+              name="rsnMin"
+              value="34.88"
+              step="0.01"
+              placeholder="Введіть Rsn min"
+            />
+          </div>
+          <div class="form-group">
+            <label for="net-xsn-min">Xsn min (Ω):</label>
+            <input
+              type="number"
+              id="net-xsn-min"
+              name="xsnMin"
+              value="65.68"
+              step="0.01"
+              placeholder="Введіть Xsn min"
+            />
+          </div>
+          <button type="submit">Розрахувати</button>
+        </form>
+
+        <div id="network-results" class="results" style="display: none">
+          <h3>Результати:</h3>
+          <h4>Струми КЗ на шинах 110kV (нормальний/мінімальний):</h4>
+          <div class="result-item">
+            <span class="result-label">Трифазний:</span>
+            <span id="ish3" class="result-value"></span>/<span
+              id="ish3-min"
+              class="result-value"
+            ></span>
+            A
+          </div>
+          <div class="result-item">
+            <span class="result-label">Двофазний:</span>
+            <span id="ish2" class="result-value"></span>/<span
+              id="ish2-min"
+              class="result-value"
+            ></span>
+            A
+          </div>
+
+          <h4>Струми КЗ на шинах 10kV (нормальний/мінімальний):</h4>
+          <div class="result-item">
+            <span class="result-label">Трифазний:</span>
+            <span id="ishn3" class="result-value"></span>/<span
+              id="ishn3-min"
+              class="result-value"
+            ></span>
+            A
+          </div>
+          <div class="result-item">
+            <span class="result-label">Двофазний:</span>
+            <span id="ishn2" class="result-value"></span>/<span
+              id="ishn2-min"
+              class="result-value"
+            ></span>
+            A
+          </div>
+
+          <h4>Струми КЗ в точці 10 (нормальний/мінімальний):</h4>
+          <div class="result-item">
+            <span class="result-label">Трифазний:</span>
+            <span id="iln3" class="result-value"></span>/<span
+              id="iln3-min"
+              class="result-value"
+            ></span>
+            A
+          </div>
+          <div class="result-item">
+            <span class="result-label">Двофазний:</span>
+            <span id="iln2" class="result-value"></span>/<span
+              id="iln2-min"
+              class="result-value"
+            ></span>
+            A
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+  </body>
+</html>
